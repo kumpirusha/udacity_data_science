@@ -1,17 +1,18 @@
 import pandas as pd
 import os
-from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 """
 Goals of the analysis:
 
-    1. Find out which features impact listing price
-    2. Check if there are any differences between regular hosts and Superhosts
-    (earnings, ratings)
-    3. Find out which listings are the most booked and why
-    
+ 1. Find out which features impact listing price
+ 2. Check if there are any differences between regular hosts and Superhosts
+ (earnings, ratings)
+ 3. Find out which listings are the most booked and why
+
 """
 
 # os.chdir(r'C:\Users\jaka.vrhovnik\Desktop\Jaka_archive\Python\udacity_data_science\project_1')
@@ -70,18 +71,12 @@ for i in listings_full.columns:
 listings_full = listings_full.loc[:, ~listings_full.columns.isin(cols_len_one)]
 
 # reformat price columns into a float dtype
-for col in ['price_x', 'weekly_price', 'cleaning_fee', 'extra_people']:
+for col in ['price', 'weekly_price', 'cleaning_fee', 'extra_people']:
     listings_full[col] = listings_full[col].str.replace(',', '').str.replace('$', '').astype(float)
 
 # reformat 'host_response_rate'
-listings_full.host_response_rate = listings_full.host_response_rate.str.replace('%', '').astype(float)/100
+listings_full.host_response_rate = listings_full.host_response_rate.str.replace('%', '').astype(float) / 100
 
-
-
-listings_full.info()
-
-for i in listings_full:
-    print(i, '---', listings_full[i].unique(), '\n','*' * 50)
 
 # further remove redundant columns
 cols_to_drop = ['name', 'summary', 'space', 'description', 'neighborhood_overview', 'notes', 'transit',
@@ -91,59 +86,62 @@ cols_to_drop = ['name', 'summary', 'space', 'description', 'neighborhood_overvie
 
 listings_full = listings_full.loc[:, ~listings_full.columns.isin(cols_to_drop)]
 
+listings_full.info()
+
+
 ##############################################################################################################
 ##############################################################################################################
 # Find out which features impact listing price
 
-# Create a subset of relevant variables
-value_cols = [i for i in range(5)] + [i for i in range(13, 46)] + [i for i in range(47, 76)]
-value_listings_db = listings_full.iloc[:, value_cols]
+# Remove NA from predictive value
+price = listings_full.iloc[:,[3,1,4]].dropna(axis=0)
 
-# change categorical values to correct format
-value_listings_db.room_type = value_listings_db.room_type.astype('category')
-value_listings_db.review_scores_value = value_listings_db.review_scores_value.astype('category')
+value_listings_db = pd.merge(left=listings_full, right=price, how='inner', on=['date','id'])
+value_listings_db.drop(axis=1, labels='price_y', inplace=True)
+value_listings_db.rename(columns={'price_x': 'price'}, errors='raise', inplace=True)
+
 
 # Correlation
-num_cols = []
+def correlation_matrix():
+    '''
+    Creates a correlation plot from numeric variables and plots values which are correlated > 0.6 with
+    price
+    '''
 
-for i in value_listings_db:
+    num_cols = []
 
-    if value_listings_db[i].dtype in ('float64', 'int64'):
-        num_cols.append(i)
+    for i in value_listings_db:
 
-value_cor_db = value_listings_db.iloc[:, value_listings_db.columns.isin(num_cols)]
-value_cor_miss = value_cor_db.isnull().mean() * 100
+        if value_listings_db[i].dtype in ('float64', 'int64'):
+            num_cols.append(i)
 
-# handpick relevant variables
-value_cor_hp = value_listings_db.iloc[:,
-               [2, 3, 9, 10, 12, 14, 17, 18, 19, 20, 30, 31, 32, 33, 34, 35, 36, 40, 41, 49, 52, 53, 54,
-                55, 56, 57, 58, 59, 60, 64]]
+    value_cor_db = value_listings_db.iloc[:, value_listings_db.columns.isin(num_cols)]
 
-pd.get_dummies(value_cor_hp, columns=['available', 'host_response_time','host_is_superhost',
-                                      'host_has_profile_pic', 'host_identity_verified'])
+    # for i in value_cor_db:
+    #     print(i, '---', value_cor_db[i].unique(), '\n', '*' * 50)
 
-for i in value_cor_hp:
-    print(i, '---', value_cor_hp[i].unique(), '\n','*' * 50)
+    # check for correlation between variables
+    value_cor = value_cor_db.corr()
+    matrix = np.triu(value_cor_db.corr())
 
+    print(
+        sns.heatmap(value_cor[value_cor > .6], annot=True, fmt='.1g', vmin=-1, vmax=1, center=0,
+                    cmap='coolwarm', mask=matrix)
+    )
 
-# check for correlation between variables
-value_cor = value_cor_hp.corr()
-matrix = np.triu(value_cor_hp.corr())
-sns.heatmap(value_cor, annot=True, fmt='.1g', vmin=-1, vmax=1, center=0, cmap='coolwarm',
-            mask=matrix)
+correlation_matrix()
 
 # Plot variables to check for differences and predictive value
 # property type
-value_listings_db.pivot_table(index=['date'], values='price', columns='property_type',
-                              aggfunc=np.mean).plot()
+value_listings_db.pivot_table(index=['date'], values='price', columns='property_type', aggfunc=np.mean).plot()
 
 # room type
 value_listings_db.pivot_table(index=['date'], values='price', columns='room_type',
-                              aggfunc=np.mean).plot()
+                          aggfunc=np.mean).plot()
 
 # review scores
 value_listings_db.pivot_table(values='listing_id', index='review_scores_rating',
-                              aggfunc=pd.Series.nunique).plot(kind='bar')
+                          aggfunc=pd.Series.nunique).plot(kind='bar')
 
 # people it accomodates
 value_listings_db.pivot_table(values='listing_id', index='accommodates', aggfunc=pd.Series.nunique).plot(
@@ -153,30 +151,59 @@ value_listings_db.pivot_table(values='price', index='accommodates', aggfunc=np.m
 
 # host response time
 value_listings_db.pivot_table(index=['year', 'month'],
-                              values='price',
-                              columns=['cancellation_policy'],
-                              aggfunc=[np.mean]).plot(grid=True)
+                          values='price',
+                          columns=['cancellation_policy'],
+                          aggfunc=[np.mean]).plot(grid=True)
 
 # apply a multiple regression model
-model = LinearRegression
+dummy_cols = ['available',
+              'host_response_time',
+              'host_is_superhost',
+              'host_has_profile_pic',
+              'host_identity_verified',
+              'property_type',
+              'room_type',
+              'bed_type',
+              'instant_bookable',
+              'cancellation_policy',
+              'require_guest_profile_picture',
+              'require_guest_phone_verification']
 
-# # pivot the table to get some basic insights into the data
-# fig, ax = plt.subplots()
-# ax.plot(listings_full[['year', 'month', 'price']].groupby(by=['year', 'month'], dropna=True).mean(),
-#         label='Mean')
-# ax.plot(listings_full[['year', 'month', 'price']].groupby(by=['year', 'month']).max(), label='Max')
-# ax.plot(listings_full[['year', 'month', 'price']].groupby(by=['year', 'month']).min(), label='Min')
-# # ax.set_yscale('log')
-# ax.set_xlabel('Date')
-# ax.set_ylabel('Price')
-# ax.set_title('Test plot')
-# ax.legend()
-# plt.show()
+value_listings_lr = pd.get_dummies(value_listings_db, columns=dummy_cols)
+
+# [i for i in value_listings_lr if value_listings_lr[i].dtype =='object']
+
+test_cols = [2, 19, 20, 21, 31, 47, 48] + [i for i in range(13,16)]
+lr_test_set = value_listings_lr.iloc[:, lambda value_listing_lr: test_cols]
 
 
-# Superhost
-listings_full.pivot_table(index=['year', 'month'], values='review_scores_accuracy', aggfunc=np.count)
+##############################################################################################################
+##############################################################################################################
+# Check for differences between regular hosts and superhosts
+
+# Superhost price diff
+listings_full.pivot_table(index=['year', 'month'], values='price', columns='host_is_superhost',
+                          aggfunc=np.mean).plot()
+plt.show()
+
+# differences in room availability
+sh_available = listings_full.pivot_table(
+    columns=['host_is_superhost', 'available'], values='price', aggfunc=[len], index=['year', 'month']
+)
+
+sh_available['regular % booked'] = (sh_available.iloc[:, 0] / (
+        sh_available.iloc[:, 1] + sh_available.iloc[:, 1])) * 100
+sh_available['superhost % booked'] = (sh_available.iloc[:, 2] / (
+        sh_available.iloc[:, 2] + sh_available.iloc[:, 3])) * 100
+
+sh_available.iloc[:, [4, 5]].plot(xlabel='Yearmonth', ylabel='% listings booked')
+plt.show()
 
 listings_full.pivot_table(
-    index=['host_is_superhost', 'available'], values='price', aggfunc=[np.mean, len]
+    values='review_scores_rating', index=['date'], aggfunc=sum
 )
+
+listings_full.review_scores_rating.hist()
+plt.show()
+listings_full.iloc[:, 20:24]
+listings_full.iloc[:, 20:24].dropna(axis=0)
