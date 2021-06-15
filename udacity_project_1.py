@@ -219,16 +219,18 @@ sns.kdeplot(regular_host, shade=True)
 plt.title("Independent Sample T-Test")
 
 t_test = sm.stats.ttest_ind(superhost, regular_host)
-t_test
+print(t_test)
 
 ##############################################################################################################
 ##############################################################################################################
 # Check which listings are the most popular
 booked_listings = listings_full[listings_full['available'].isin(['booked'])]
+
 bookings = listings_full.pivot_table(index='id', columns='available', values='listing_id', aggfunc=len)
 bookings_db = pd.merge(left=listings_csv, right=bookings, how='left', on=['id'])
 bookings_db.fillna(value={'booked': 0, 'free': 0}, inplace=True)
 bookings_db['booked_ratio'] = bookings_db.booked / (bookings_db.booked + bookings_db.free)
+bookings_db.host_response_rate = bookings_db.host_response_rate.str.replace('%', '').astype(float) / 100
 
 # reformat price columns into a float dtype
 for col in ['price', 'weekly_price', 'cleaning_fee', 'extra_people']:
@@ -239,35 +241,26 @@ for col in ['price', 'weekly_price', 'cleaning_fee', 'extra_people']:
 bookings_db.pivot_table(index=['property_type'], values='booked_ratio', aggfunc=np.mean).sort_values(
     'booked_ratio').plot(kind='bar')
 
+bookings_db.pivot_table(index=['property_type'], values='id', aggfunc=pd.Series.nunique).sort_values(by='id')
+
 # room type
 bookings_db.pivot_table(index=['room_type'], values='booked_ratio', aggfunc=np.mean).sort_values(
     'booked_ratio').plot(kind='bar')
 
 # neighbourhood
 bookings_db.pivot_table(index=['neighbourhood_cleansed'], values='booked_ratio', aggfunc=np.mean).sort_values(
-    'booked_ratio', ascending=False)[:10]
+    'booked_ratio', ascending=False)[:21]
 
-# amenities
-bookings_db.pivot_table(index=['host_response_rate'], values='booked_ratio', aggfunc=np.mean).plot(kind='bar')
-
-pd.get_dummies(data=bookings_db.amenities)
+# response rate
+bookings_db.pivot_table(index=['host_response_rate'], values='booked_ratio',
+                        aggfunc=[np.mean]).plot(kind='bar')
+bookings_db[bookings_db.accommodates < 7].pivot_table(index='accommodates', values='booked_ratio',
+                                                      aggfunc=[np.mean]).plot(kind='bar')
 
 # review scores
-listings_full.pivot_table(values='number_of_reviews', index='review_scores_rating',
-                          aggfunc=sum).plot(kind='bar')
+bookings_db.pivot_table(index='cancellation_policy', values='booked_ratio', aggfunc=np.mean).plot(kind='bar')
 
-# people it accomodates
-value_listings_db.pivot_table(values='listing_id', index='accommodates', aggfunc=pd.Series.nunique).plot(
-    kind='bar')
-value_listings_db.pivot_table(values='price', index='accommodates', aggfunc=np.mean).plot(kind='bar')
-
-# cancellation policy
-value_listings_db.pivot_table(index=['year', 'month'],
-                              values='price',
-                              columns=['cancellation_policy'],
-                              aggfunc=[np.mean]).plot(grid=True, ylabel='Mean price')
-
-value_listings_db.pivot_table(index=['year', 'month'],
-                              values='listing_id',
-                              columns=['cancellation_policy'],
-                              aggfunc=[pd.Series.nunique]).plot(grid=True, ylabel='# of listings')
+# price
+bookings_db[bookings_db.minimum_nights < 100].plot(kind='scatter', x='minimum_nights', y='booked_ratio')
+bookings_db.pivot_table(values=['booked_ratio', 'price'], index='minimum_nights',
+                        aggfunc=[np.mean, pd.Series.nunique]).sort_values(by='booked_ratio').plot(secondary_y='price')
