@@ -15,8 +15,8 @@ Goals of the analysis:
 
 """
 
-# os.chdir(r'C:\Users\jaka.vrhovnik\Desktop\Jaka_archive\Python\udacity_data_science\project_1')
-os.chdir(r'D:\Udacity')
+os.chdir(r'C:\Users\jaka.vrhovnik\Desktop\Jaka_archive\Python\udacity_data_science\project_1')
+# os.chdir(r'D:\Udacity')
 
 calendar_csv = pd.read_csv(r'calendar.csv')
 listings_csv = pd.read_csv(r'listings.csv')
@@ -26,6 +26,7 @@ listings_csv = pd.read_csv(r'listings.csv')
 # check the imports for missing data
 miss_calendar = calendar_csv.isnull().mean() * 100
 miss_listings = pd.DataFrame(listings_csv.isnull().mean() * 100, columns=['missing'])
+
 
 # remove columns with more than half of the data missing and merge the two databases
 listings_removed_cols = miss_listings[miss_listings.missing > 50]
@@ -46,8 +47,7 @@ listings_full.rename(columns={'price_x': 'price'}, errors='raise', inplace=True)
 # replace values with meaningful descriptors
 cols_to_replace = {
     'host_is_superhost': {'t': 'superhost', 'f': 'regular'},
-    'available': {'t': 'free', 'f': 'booked'},
-
+    'available': {'t': 'free', 'f': 'booked'}
 }
 
 for k, v in cols_to_replace.items():
@@ -86,7 +86,6 @@ listings_full = listings_full.loc[:, ~listings_full.columns.isin(cols_to_drop)]
 ##############################################################################################################
 ##############################################################################################################
 # Find out which features impact listing price
-
 # Remove NA from predictive value
 price = listings_full.iloc[:, [3, 1, 4]].dropna(axis=0)
 
@@ -110,9 +109,6 @@ def correlation_matrix():
             num_cols.append(i)
 
     value_cor_db = value_listings_db.iloc[:, value_listings_db.columns.isin(num_cols)]
-
-    # for i in value_cor_db:
-    #     print(i, '---', value_cor_db[i].unique(), '\n', '*' * 50)
 
     # check for correlation between variables
     value_cor = value_cor_db.corr()
@@ -144,6 +140,7 @@ value_listings_db.pivot_table(values='listing_id', index='review_scores_rating',
 value_listings_db.pivot_table(values='listing_id', index='accommodates', aggfunc=pd.Series.nunique).plot(
     kind='bar')
 value_listings_db.pivot_table(values='price', index='accommodates', aggfunc=np.mean).plot(kind='bar')
+
 
 # cancellation policy
 value_listings_db.pivot_table(index=['year', 'month'],
