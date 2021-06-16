@@ -3,12 +3,17 @@ Analysis of Airbnb Seattle dataset. The 'listings.csv' and 'calendar.csv' files 
 
 ## Libraries used
 
-os
-pandas
-numpy
-statsmodels.api
-seaborn
-matplotlib.pyplot
+> os
+>
+> pandas
+>
+> numpy
+> 
+> statsmodels.api
+> 
+> seaborn
+> 
+> matplotlib.pyplot
 
 ## Project motivation
 The goal of the project is to use the data on Airbnb Seattle listings to answer three main questions.
