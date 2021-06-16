@@ -25,9 +25,9 @@ The goal of the project is to use the data on Airbnb Seattle listings to answer 
 ## File description
 Files in the repository are related to each individual question.
 
-listing_price
-regular_vs_superhost
-popular_listings
+- listing_price.ipynb - Analysis of the features related to the listing price 
+- regular_vs_superhost
+- popular_listings
 
 ## Results
 
