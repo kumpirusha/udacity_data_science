@@ -3,17 +3,12 @@ Analysis of Airbnb Seattle dataset. The 'listings.csv' and 'calendar.csv' files 
 
 ## Libraries used
 
-> os
->
-> pandas
->
-> numpy
-> 
-> statsmodels.api
-> 
-> seaborn
-> 
-> matplotlib.pyplot
+* os
+* pandas
+* numpy 
+* statsmodels.api
+* seaborn
+* matplotlib.pyplot
 
 ## Project motivation
 The goal of the project is to use the data on Airbnb Seattle listings to answer three main questions.
@@ -26,8 +21,8 @@ The goal of the project is to use the data on Airbnb Seattle listings to answer 
 Files in the repository are related to each individual question.
 
 - listing_price.ipynb - Analysis of the features related to the listing price 
-- regular_vs_superhost
-- popular_listings
+- superhost.ipynb - Searching for differences between 'regular' hosts and Superhosts
+- popular_listings.ipynb - Trying to detect any features which might indicate what makes a certain listing popular
 
 ## Results
 
